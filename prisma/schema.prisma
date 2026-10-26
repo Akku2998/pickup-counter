@@ -1,0 +1,77 @@
+// // This is your Prisma schema file,
+// // learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// // Get a free hosted Postgres database in seconds: `npx create-db`
+
+// generator client {
+//   provider = "prisma-client"
+//   output   = "../app/generated/prisma"
+// }
+
+// datasource db {
+//   provider = "postgresql"
+// }
+
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  EXPIRED
+  NEEDS_REVIEW
+  PICKED_UP
+}
+
+model Product {
+  id         String   @id @default(uuid())
+  name       String
+  pricePaise Int
+  stock      Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  orderItems OrderItem[]
+}
+
+model Order {
+  id         String      @id @default(uuid())
+  status     OrderStatus @default(PENDING)
+  totalPaise Int
+  expiresAt  DateTime
+  createdAt  DateTime    @default(now())
+  paidAt     DateTime?
+  pickedUpAt DateTime?
+
+  items         OrderItem[]
+  paymentEvents PaymentEvent[]
+}
+
+model OrderItem {
+  id         String @id @default(uuid())
+  orderId    String
+  productId  String
+  quantity   Int
+  pricePaise Int
+
+  order   Order   @relation(fields: [orderId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
+
+  @@unique([orderId, productId])
+}
+
+model PaymentEvent {
+  id          String   @id @default(uuid())
+  eventId     String   @unique
+  orderId     String
+  amountPaise Int
+  status      String
+  processedAt DateTime @default(now())
+
+  order Order @relation(fields: [orderId], references: [id])
+}

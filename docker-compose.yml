@@ -1,0 +1,47 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: pickup_postgres
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_USER: pickup_user
+      POSTGRES_PASSWORD: pickup_password
+      POSTGRES_DB: pickup_db
+
+    ports:
+      - "5434:5432"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pickup_user -d pickup_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    container_name: pickup_app
+    restart: unless-stopped
+
+    ports:
+      - "3000:3000"
+
+    environment:
+      DATABASE_URL: postgresql://pickup_user:pickup_password@postgres:5432/pickup_db?schema=public
+      WEBHOOK_SECRET: ${WEBHOOK_SECRET:?Set WEBHOOK_SECRET in .env}
+      NODE_ENV: production
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    command: >
+      sh -c "npx prisma migrate deploy --config prisma7.config.ts &&
+             npx prisma db seed --config prisma7.config.ts &&
+             npm run start"
+
+volumes:
+  postgres_data:
